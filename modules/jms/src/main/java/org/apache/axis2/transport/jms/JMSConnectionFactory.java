@@ -347,7 +347,14 @@ public class JMSConnectionFactory {
                 connection, isSessionTransacted(), Session.AUTO_ACKNOWLEDGE, isJmsSpec11(), isQueue());
 
         } catch (JMSException e) {
-            handleException("Error creating JMS session from JMS CF : " + name, e);
+            try {
+                clearSharedConnections();
+                return JMSUtils.createSession(getConnection(), isSessionTransacted(), Session.AUTO_ACKNOWLEDGE,
+                        isJmsSpec11(), isQueue());
+            } catch (JMSException e1) {
+                handleException("Error creating JMS session from JMS CF : " + name, e);
+            }
+            log.info("Detected a stale connection. Hence refreshing the connection cache map.");
         }
         return null;
     }
@@ -458,5 +465,10 @@ public class JMSConnectionFactory {
             }
         }
         return sharedProducer;
+    }
+
+    private synchronized void clearSharedConnections() {
+        sharedConnectionMap.clear();
+        lastReturnedConnectionIndex = 0;
     }
 }
