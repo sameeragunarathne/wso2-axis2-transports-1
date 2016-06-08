@@ -34,7 +34,6 @@ import javax.transaction.NotSupportedException;
 import javax.transaction.SystemException;
 import javax.transaction.Status;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -170,9 +169,25 @@ public class ServiceTaskManager {
      */
     private int initialReconnectDuration = 10000;
     /**
+     * Default duration to re-attempt after message consume failure
+     */
+    private Integer consumeErrorRetryDelay = 100;
+    /**
      * Progression factory for geometric series that calculates re-connection times
      */
     private double reconnectionProgressionFactor = 2.0; // default to [bounded] exponential
+    /**
+     * Progression factory for geometric series that calculates re-try after failures from message consuming
+     */
+    private Double consumeErrorProgressionFactor = 2.0; // default to [bounded] exponential
+    /**
+     * Maximum consumer retries on consume error before sleep.
+     */
+    private Integer maxConsumeErrorRetryBeforeDelay = 20; // default 20
+    /**
+     * Number of consume retries upon consume error.
+     */
+    private int consumerRetryCount = 0;
     /**
      * Upper limit on reconnection attempt duration
      */
@@ -468,6 +483,7 @@ public class ServiceTaskManager {
 
         private boolean connectionReceivedError = false;
 
+
         /**
          * As soon as we create a new polling task, add it to the STM for control later
          */
@@ -519,6 +535,7 @@ public class ServiceTaskManager {
             workerState = STATE_STARTED;
             activeTaskCount.getAndIncrement();
             int messageCount = 0;
+            long retryDurationOnConsumerFailure = consumeErrorRetryDelay;
 
             if (log.isDebugEnabled()) {
                 log.debug("New poll task starting : thread id = " + Thread.currentThread().getId());
@@ -537,7 +554,7 @@ public class ServiceTaskManager {
                     try {
                         if (transactionality == BaseConstants.TRANSACTION_JTA) {
                             ut = getUserTransaction();
-                            // We will only create a new tx if there is no tx alive 
+                            // We will only create a new tx if there is no tx alive
                             if (ut.getStatus() == Status.STATUS_NO_TRANSACTION) {
                                 ut.begin();
                             }
@@ -563,6 +580,20 @@ public class ServiceTaskManager {
                             log.trace("No message received by Thread ID : " +
                                     Thread.currentThread().getId() + " for destination : " + destination);
                         }
+                    }
+
+                    if (connectionReceivedError && (maxConsumeErrorRetryBeforeDelay < consumerRetryCount)) {
+                        try {
+                            Thread.sleep(retryDurationOnConsumerFailure);
+                        } catch (InterruptedException ignore) {
+                        }
+
+                        retryDurationOnConsumerFailure = (long) (retryDurationOnConsumerFailure * consumeErrorProgressionFactor);
+                        log.info("Error while consuming message from service : " +
+                                  serviceName + ". Next retry in " + (retryDurationOnConsumerFailure / 1000) +
+                                  " seconds");
+                    } else {
+                        retryDurationOnConsumerFailure = consumeErrorRetryDelay;
                     }
 
                     if (message != null) {
@@ -653,14 +684,25 @@ public class ServiceTaskManager {
 
             try {
                 if (getReceiveTimeout() < 0) {
-                    return consumer.receive();
+                    Message msg =  consumer.receive();
+                    consumerRetryCount = 0;
+                    return msg;
                 } else {
-                    return consumer.receive(getReceiveTimeout());
+                    Message msg = consumer.receive(getReceiveTimeout());
+                    consumerRetryCount = 0;
+                    return msg;
+
                 }
             } catch (IllegalStateException ignore) {
                 // probably the consumer (shared) was closed.. which is still ok.. as we didn't read
             } catch (JMSException e) {
                 connectionReceivedError = true;
+                consumerRetryCount++;
+                if (consumerRetryCount <= maxConsumeErrorRetryBeforeDelay) {
+                    log.warn("Could not consume message from: " +
+                            serviceName + ". Expect " + (maxConsumeErrorRetryBeforeDelay - consumerRetryCount) + " more " +
+                            "retries before exponential sleep!");
+                }
                 logError("Error receiving message for service : " + serviceName, e);
             }
             return null;
@@ -1372,6 +1414,24 @@ public class ServiceTaskManager {
 
     public void setReconnectDuration(Long reconnectDuration) {
         this.reconnectDuration = reconnectDuration;
+    }
+
+    public void setMaxConsumeErrorRetryBeforeDelay(Integer maxConsumeErrorRetryBeforeDelay) {
+        if (maxConsumeErrorRetryBeforeDelay != null) {
+            this.maxConsumeErrorRetryBeforeDelay = maxConsumeErrorRetryBeforeDelay;
+        }
+    }
+
+    public void setConsumeErrorProgressionFactor(Double consumeErrorProgressionFactor) {
+        if (consumeErrorProgressionFactor != null) {
+            this.consumeErrorProgressionFactor = consumeErrorProgressionFactor;
+        }
+    }
+
+    public void setConsumeErrorRetryDelay(Integer consumeErrorRetryDelay) {
+        if (consumeErrorRetryDelay != null) {
+            this.consumeErrorRetryDelay = consumeErrorRetryDelay;
+        }
     }
 
     public int getMaxMessagesPerTask() {
