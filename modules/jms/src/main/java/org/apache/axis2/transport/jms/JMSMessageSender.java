@@ -81,17 +81,21 @@ public class JMSMessageSender {
      */
     public JMSMessageSender(JMSConnectionFactory jmsConnectionFactory, String targetAddress) {
 
-        this.cacheLevel  = jmsConnectionFactory.getCacheLevel();
-        this.jmsSpec11   = jmsConnectionFactory.isJmsSpec11();
-        this.connection  = jmsConnectionFactory.getConnection();
-        this.session     = jmsConnectionFactory.getSession(connection);
-        boolean isQueue = jmsConnectionFactory.isQueue() == null ? true : jmsConnectionFactory.isQueue();
-        this.destination =
-                jmsConnectionFactory.getSharedDestination() == null ?
-                        jmsConnectionFactory.getDestination(JMSUtils.getDestination(targetAddress),
-                                isQueue ? JMSConstants.DESTINATION_TYPE_QUEUE : JMSConstants.DESTINATION_TYPE_TOPIC) :
-                        jmsConnectionFactory.getSharedDestination();
-        this.producer = jmsConnectionFactory.getMessageProducer(connection, session, destination);
+        try {
+            this.cacheLevel = jmsConnectionFactory.getCacheLevel();
+            this.jmsSpec11 = jmsConnectionFactory.isJmsSpec11();
+            this.connection = jmsConnectionFactory.getConnection();
+            this.session = jmsConnectionFactory.getSession(connection);
+            boolean isQueue = jmsConnectionFactory.isQueue() == null ? true : jmsConnectionFactory.isQueue();
+            this.destination =
+                    jmsConnectionFactory.getSharedDestination() == null ?
+                            jmsConnectionFactory.getDestination(JMSUtils.getDestination(targetAddress),
+                                    isQueue ? JMSConstants.DESTINATION_TYPE_QUEUE : JMSConstants.DESTINATION_TYPE_TOPIC) :
+                            jmsConnectionFactory.getSharedDestination();
+            this.producer = jmsConnectionFactory.getMessageProducer(connection, session, destination);
+        } catch (Exception e) {
+            handleException("Error while creating message sender", e);
+        }
     }
 
     /**
@@ -285,6 +289,13 @@ public class JMSMessageSender {
 
     private void handleException(String message, Exception e) {
         log.error(message, e);
+
+        // Cleanup connections on error. See ESBJAVA-4713
+        if (log.isDebugEnabled()) {
+            log.debug("Cleaning up connections on error", e);
+        }
+        close();
+
         throw new AxisJMSException(message, e);
     }
 
