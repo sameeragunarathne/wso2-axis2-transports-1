@@ -294,9 +294,44 @@ public class JMSMessageSender {
         if (log.isDebugEnabled()) {
             log.debug("Cleaning up connections on error", e);
         }
-        close();
+        closeOnException();
 
         throw new AxisJMSException(message, e);
+    }
+
+    /**
+     * Close connection upon exception. See ESBJAVA-4713
+     */
+    private void closeOnException() {
+        if (producer != null) {
+            try {
+                producer.close();
+            } catch (JMSException e) {
+                log.error("Error closing JMS MessageProducer after send", e);
+            } finally {
+                producer = null;
+            }
+        }
+
+        if (session != null) {
+            try {
+                session.close();
+            } catch (JMSException e) {
+                log.error("Error closing JMS Session after send", e);
+            } finally {
+                session = null;
+            }
+        }
+
+        if (connection != null) {
+            try {
+                connection.close();
+            } catch (JMSException e) {
+                log.error("Error closing JMS Connection after send", e);
+            } finally {
+                connection = null;
+            }
+        }
     }
 
     private Boolean getBooleanProperty(MessageContext msgCtx, String name) {
