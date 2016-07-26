@@ -27,7 +27,7 @@ public class MqttPublisherCallback implements MqttCallback {
     private Log log = LogFactory.getLog(MqttPublisherCallback.class);
 
     public void connectionLost(Throwable throwable) {
-        log.error("Connection Lost");
+        log.error("Connection Lost", throwable);
     }
 
     public void messageArrived(String s, MqttMessage mqttMessage) throws Exception {
@@ -35,6 +35,8 @@ public class MqttPublisherCallback implements MqttCallback {
     }
 
     public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
-        log.info("message delivered .. : " + iMqttDeliveryToken.toString());
+        if (log.isDebugEnabled()) {
+            log.debug("Message delivered successfully: " + iMqttDeliveryToken.toString());
+        }
     }
 }
