@@ -171,18 +171,16 @@ public class MqttConnectionFactory {
         } else {
             uniqueClientId = "";
         }
-        {
-            if (qos == 2 || qos == 1) {
-                if (tmpDir != null) {
-                    dataStore = new MqttDefaultFilePersistence(tmpDir + uniqueClientId);
-                } else {
-                    tmpDir = System.getProperty(JAVA_IO_TMP_DIR_PROPERTY);
-                    dataStore = new MqttDefaultFilePersistence(tmpDir + uniqueClientId);
-                }
+        if (qos == 2 || qos == 1) {
+            if (tmpDir != null) {
+                dataStore = new MqttDefaultFilePersistence(tmpDir + uniqueClientId);
+            } else {
+                tmpDir = System.getProperty(JAVA_IO_TMP_DIR_PROPERTY);
+                dataStore = new MqttDefaultFilePersistence(tmpDir + uniqueClientId);
             }
-            if (qos == 0) {
-                dataStore = null;
-            }
+        }
+        if (qos == 0) {
+            dataStore = null;
         }
         return dataStore;
     }
