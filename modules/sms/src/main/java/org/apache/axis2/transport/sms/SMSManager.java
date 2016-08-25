@@ -182,7 +182,7 @@ public class SMSManager {
             currentImplimentation.sendSMS(sms);
         } catch (Exception e) {
             log.error("Error while sending the SMS " , e);
-            throw new AxisFault(e.getMessage());
+            throw new AxisFault(e.getMessage(), e);
         }
 
     }

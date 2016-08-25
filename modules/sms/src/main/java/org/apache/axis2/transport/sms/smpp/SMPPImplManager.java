@@ -264,19 +264,19 @@ public class SMPPImplManager implements SMSImplManager {
             log.debug("Message Submited with id" + messageId);
         } catch (IOException e) {
             this.outSession = null;
-            throw new AxisFault(e.getMessage());
+            throw new AxisFault(e.getMessage(), e);
         } catch (InvalidResponseException e) {
             this.outSession = null;
-            throw new AxisFault(e.getMessage());
+            throw new AxisFault(e.getMessage(), e);
         } catch (PDUException e) {
             this.outSession = null;
-            throw new AxisFault(e.getMessage());
+            throw new AxisFault(e.getMessage(), e);
         } catch (NegativeResponseException e) {
             this.outSession = null;
-            throw new AxisFault(e.getMessage());
+            throw new AxisFault(e.getMessage(), e);
         } catch (ResponseTimeoutException e) {
             this.outSession = null;
-            throw new AxisFault(e.getMessage());
+            throw new AxisFault(e.getMessage(), e);
         }
 
     }
