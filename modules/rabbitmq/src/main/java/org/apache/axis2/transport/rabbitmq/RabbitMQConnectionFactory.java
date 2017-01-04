@@ -18,6 +18,7 @@
 
 package org.apache.axis2.transport.rabbitmq;
 
+import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import org.apache.axiom.om.OMAttribute;
@@ -36,10 +37,6 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.securevault.SecretResolver;
 import org.wso2.securevault.SecureVaultException;
 
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
-import javax.xml.namespace.QName;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.KeyStore;
@@ -47,6 +44,10 @@ import java.util.Hashtable;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+import javax.xml.namespace.QName;
 
 /**
  * Encapsulate a RabbitMQ AMQP Connection factory definition within an Axis2.xml
@@ -67,6 +68,7 @@ public class RabbitMQConnectionFactory {
     private int retryInterval = RabbitMQConstants.DEFAULT_RETRY_INTERVAL;
     private int retryCount = RabbitMQConstants.DEFAULT_RETRY_COUNT;
     private int connectionPoolSize = RabbitMQConstants.DEFAULT_CONNECTION_POOL_SIZE;
+    private Address[] addresses;
 
 
     /**
@@ -129,7 +131,7 @@ public class RabbitMQConnectionFactory {
     public Connection createConnection() throws IOException {
         Connection connection = null;
         try {
-            connection = RabbitMQUtils.createConnection(connectionFactory);
+            connection = RabbitMQUtils.createConnection(connectionFactory, addresses);
             log.info("[" + name + "] Successfully connected to RabbitMQ Broker");
         } catch (IOException e) {
             log.error("[" + name + "] Error creating connection to RabbitMQ Broker. Reattempting to connect.", e);
@@ -140,7 +142,7 @@ public class RabbitMQConnectionFactory {
                         " in " + retryInterval + " ms");
                 try {
                     Thread.sleep(retryInterval);
-                    connection = RabbitMQUtils.createConnection(connectionFactory);
+                    connection = RabbitMQUtils.createConnection(connectionFactory, addresses);
                     log.info("[" + name + "] Successfully connected to RabbitMQ Broker");
                 } catch (InterruptedException e1) {
                     log.error("[" + name + "] Error while trying to reconnect to RabbitMQ Broker", e1);
@@ -304,19 +306,24 @@ public class RabbitMQConnectionFactory {
             }
         }
 
-        if (!StringUtils.isEmpty(hostName)) {
-            connectionFactory.setHost(hostName);
-        } else {
-            handleException("Host name is not defined");
-        }
-
-        try {
-            int port = Integer.parseInt(portValue);
-            if (port > 0) {
-                connectionFactory.setPort(port);
+        // Resolving hostname(s) and port(s)
+        if (!StringUtils.isEmpty(hostName) && !StringUtils.isEmpty(portValue)) {
+            String[] hostNames = hostName.split(",");
+            String[] portValues = portValue.split(",");
+            if (hostNames.length == portValues.length) {
+                addresses = new Address[hostNames.length];
+                for (int i = 0; i < hostNames.length; i++) {
+                    if (!hostNames[i].isEmpty() && !portValues[i].isEmpty()) {
+                        try {
+                            addresses[i] = new Address(hostNames[i].trim(), Integer.parseInt(portValues[i].trim()));
+                        } catch (NumberFormatException e) {
+                            handleException("Number format error in port number", e);
+                        }
+                    }
+                }
             }
-        } catch (NumberFormatException e) {
-            handleException("Number format error in port number", e);
+        } else {
+            handleException("Host name(s) and port(s) are not correctly defined");
         }
 
         if (!StringUtils.isEmpty(userName)) {
