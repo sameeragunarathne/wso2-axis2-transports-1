@@ -41,6 +41,7 @@ import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -773,6 +774,13 @@ public class ServiceTaskManager {
                     if (log.isDebugEnabled()) {
                         log.debug("Error closing RMQ channel, socket already closed, service - " + serviceName +
                                   ", Thread id - " + Thread.currentThread().getId());
+                    }
+                } catch (TimeoutException e) {
+                    log.warn("Error while closing consumer Connection, TimeoutException, service - " + serviceName +
+                            ", Listner id - " + Thread.currentThread().getId());
+                    if (log.isDebugEnabled()) {
+                        log.debug("Error while closing consumer Connection, TimeoutException, service - " +
+                                serviceName + ", Listner id - " + Thread.currentThread().getId(), e);
                     }
                 } catch (IOException e) {
                     if (handleIOException("Error while closing RabbitMQ RMQ channel for service", e)) {
