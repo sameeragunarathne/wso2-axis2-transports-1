@@ -54,7 +54,7 @@ public class RabbitMQUtils {
         try {
             connection = factory.newConnection(addresses);
         } catch (TimeoutException e) {
-            log.debug("TimeoutException", e);
+            log.warn("TimeoutException", e);
         }
         return connection;
     }
