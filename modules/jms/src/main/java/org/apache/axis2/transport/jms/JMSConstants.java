@@ -177,6 +177,10 @@ public class JMSConstants {
      */
     public static final String PARAM_MAX_CONSUME_RETRY_BEFORE_DELAY = "transport.jms.MaxConsumeErrorRetriesBeforeDelay";
     /**
+     * Maximum retries on consumer error.
+     */
+    public static final String PARAM_MAX_CONSUME_RETRY_COUNT = "transport.jms.MaxConsumeErrorRetryCount";
+    /**
      *The number of concurrent consumers to be created to poll for messages for this service
      * For Topics, this should be ONE, to prevent receipt of multiple copies of the same message
      */
