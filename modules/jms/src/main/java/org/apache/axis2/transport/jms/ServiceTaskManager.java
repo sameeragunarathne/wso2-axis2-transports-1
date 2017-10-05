@@ -189,6 +189,11 @@ public class ServiceTaskManager {
      */
     private int consumerRetryCount = 0;
     /**
+     * Maximum consumer retries on consume error: after this value is reached a manual Connection exception will be
+     * thrown.
+     */
+    private Integer maxConsumerErrorRetryCount = -1; // default is -1
+    /**
      * Upper limit on reconnection attempt duration
      */
     private long maxReconnectDuration = 1000 * 60 * 1; // 1 min
@@ -581,7 +586,14 @@ public class ServiceTaskManager {
                                     Thread.currentThread().getId() + " for destination : " + destination);
                         }
                     }
-
+                    if (maxConsumerErrorRetryCount != -1 && consumerRetryCount > maxConsumerErrorRetryCount) {
+                        log.warn("Creating a Forced Error Recovery task for Connection level recovery "
+                                + "for the service : " + serviceName);
+                        ErrorRecoverTask errorRecoverTask = new ErrorRecoverTask(this);
+                        Thread errorRecoverThread = new Thread(errorRecoverTask);
+                        errorRecoverThread.setName("JMSForcedErrorRecoveryThread-" + errorRecoverThread.getId());
+                        errorRecoverThread.start();
+                    }
                     if (connectionReceivedError && (maxConsumeErrorRetryBeforeDelay < consumerRetryCount)) {
                         try {
                             Thread.sleep(retryDurationOnConsumerFailure);
@@ -1434,6 +1446,17 @@ public class ServiceTaskManager {
         }
     }
 
+    /**
+     * Method to set the maximum number of consumer retries when a consume error occurs.
+     *
+     * @param maxConsumerErrorRetryCount maximum number of consumer retries
+     */
+    public void setMaxConsumerErrorRetryCount(Integer maxConsumerErrorRetryCount) {
+        if (maxConsumerErrorRetryCount != null) {
+            this.maxConsumerErrorRetryCount = maxConsumerErrorRetryCount;
+        }
+    }
+
     public int getMaxMessagesPerTask() {
         return maxMessagesPerTask;
     }
@@ -1517,5 +1540,20 @@ public class ServiceTaskManager {
 
     public void setServiceTaskManagerState(int serviceTaskManagerState) {
         this.serviceTaskManagerState = serviceTaskManagerState;
+    }
+
+    /**
+     * Error recovery task to force recovery upon reaching {@link #maxConsumerErrorRetryCount}.
+     */
+    private class ErrorRecoverTask implements Runnable {
+        private MessageListenerTask messageListenerTask;
+        public ErrorRecoverTask(MessageListenerTask messageListenerTask) {
+            this.messageListenerTask = messageListenerTask;
+        }
+        @Override
+        public void run() {
+            JMSException jmsException = new JMSException("FORCED CONNECTION RESTART", "FC_ERROR");
+            messageListenerTask.onException(jmsException);
+        }
     }
 }
