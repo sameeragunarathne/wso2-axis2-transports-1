@@ -37,6 +37,7 @@ import org.apache.commons.io.output.WriterOutputStream;
 
 import javax.activation.DataHandler;
 import javax.jms.*;
+import javax.jms.IllegalStateException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
@@ -186,6 +187,10 @@ public class JMSSender extends AbstractTransportSender implements ManagementSupp
         try {
             message = createJMSMessage(msgCtx, messageSender.getSession(), contentTypeProperty);
         } catch (JMSException e) {
+            if (e instanceof IllegalStateException) {
+                //This can happen due to the session trying to connect already closed
+                jmsConnectionFactory.clearCache();
+            }
             handleException("Error creating a JMS message from the message context", e);
         }
 
