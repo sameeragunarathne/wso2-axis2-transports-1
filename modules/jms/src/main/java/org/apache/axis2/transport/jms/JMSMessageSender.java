@@ -19,6 +19,7 @@
 
 package org.apache.axis2.transport.jms;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.axis2.context.MessageContext;
@@ -87,7 +88,7 @@ public class JMSMessageSender {
             this.connection = jmsConnectionFactory.getConnection();
             this.session = jmsConnectionFactory.getSession(connection);
             boolean isQueue = jmsConnectionFactory.isQueue() == null ? true : jmsConnectionFactory.isQueue();
-            this.destination = JMSUtils.getDestination(targetAddress) == null ?
+            this.destination = StringUtils.isEmpty(JMSUtils.getDestination(targetAddress)) ?
                     jmsConnectionFactory.getSharedDestination() :
                     jmsConnectionFactory.getDestination(JMSUtils.getDestination(targetAddress),
                                     isQueue ? JMSConstants.DESTINATION_TYPE_QUEUE : JMSConstants.DESTINATION_TYPE_TOPIC);
