@@ -51,6 +51,13 @@ public class JMSMessageSender {
     private boolean jmsSpec11 = true;
     /** Are we sending to a Queue ? */
     private Boolean isQueue = null;
+    /**
+     * Boolean to track if producer caching will be honoured.
+     * True if producer caching is enabled and this {@link JMSMessageSender} is created specifying a
+     * {@link JMSConnectionFactory} and target EPR, via
+     * {@link JMSMessageSender#JMSMessageSender(JMSConnectionFactory, String)}.
+     */
+    private Boolean isProducerCachingHonoured = false;
 
     /**
      * This is a low-end method to support the one-time sends using JMS 1.0.2b
@@ -84,6 +91,7 @@ public class JMSMessageSender {
 
         try {
             this.cacheLevel = jmsConnectionFactory.getCacheLevel();
+            this.isProducerCachingHonoured = cacheLevel > JMSConstants.CACHE_SESSION;
             this.jmsSpec11 = jmsConnectionFactory.isJmsSpec11();
             this.connection = jmsConnectionFactory.getConnection();
             this.session = jmsConnectionFactory.getSession(connection);
@@ -143,23 +151,43 @@ public class JMSMessageSender {
         // perform actual message sending
         try {
             if (jmsSpec11 || isQueue == null) {
-                producer.send(message);
+                if (isProducerCachingHonoured) {
+                    producer.send(destination, message);
+                } else {
+                    producer.send(message);
+                }
 
             } else {
                 if (isQueue) {
                     try {
-                        ((QueueSender) producer).send(message);
+                        if (isProducerCachingHonoured) {
+                            ((QueueSender) producer).send(destination, message);
+                        } else {
+                            ((QueueSender) producer).send(message);
+                        }
                     } catch (JMSException e) {
                         createTempQueueConsumer();
-                        ((QueueSender) producer).send(message);
+                        if (isProducerCachingHonoured) {
+                            ((QueueSender) producer).send(destination, message);
+                        } else {
+                            ((QueueSender) producer).send(message);
+                        }
                     }
 
                 } else {
                     try {
-                        ((TopicPublisher) producer).publish(message);
+                        if (isProducerCachingHonoured) {
+                            ((TopicPublisher) producer).publish((Topic) destination, message);
+                        } else {
+                            ((TopicPublisher) producer).publish(message);
+                        }
                     } catch (JMSException e) {
                         createTempTopicSubscriber();
-                        ((TopicPublisher) producer).publish(message);
+                        if (isProducerCachingHonoured) {
+                            ((TopicPublisher) producer).publish((Topic) destination, message);
+                        } else {
+                            ((TopicPublisher) producer).publish(message);
+                        }
                     }
                 }
             }
