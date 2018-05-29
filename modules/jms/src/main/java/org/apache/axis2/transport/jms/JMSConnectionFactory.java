@@ -422,7 +422,7 @@ public class JMSConnectionFactory {
     public MessageProducer getMessageProducer(
         Connection connection, Session session, Destination destination) {
         if (cacheLevel > JMSConstants.CACHE_SESSION) {
-            return getSharedProducer();
+            return getNullDestinationSharedProducer();
         } else {
             return createProducer((session == null ? getSession(connection) : session), destination);
         }
@@ -469,6 +469,23 @@ public class JMSConnectionFactory {
             sharedProducer = createProducer(getSharedSession(), sharedDestination);
             if (log.isDebugEnabled()) {
                 log.debug("Created shared JMS MessageConsumer for JMS CF : " + name);
+            }
+        }
+        return sharedProducer;
+    }
+
+    /**
+     * Get a shared MessageProducer from this JMS CF with destination set to null to use with multiple destinations
+     * when producer caching is enabled.
+     *
+     * @return shared MessageProducer from this JMS CF with destination set to null
+     */
+    private synchronized MessageProducer getNullDestinationSharedProducer() {
+        if (sharedProducer == null) {
+            sharedProducer = createProducer(getSharedSession(), null);
+            if (log.isDebugEnabled()) {
+                log.debug("Created shared JMS MessageConsumer with no destination specified, for JMS CF : " + name +
+                                  " , with producer caching enabled");
             }
         }
         return sharedProducer;
