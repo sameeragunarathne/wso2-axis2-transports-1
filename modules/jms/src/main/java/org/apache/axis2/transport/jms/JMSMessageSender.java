@@ -206,7 +206,7 @@ public class JMSMessageSender {
             if (log.isDebugEnabled()) {
                 log.debug("Sent Message Context ID : " + msgCtx.getMessageID() +
                     " with JMS Message ID : " + msgId +
-                    " to destination : " + producer.getDestination());
+                    " to destination : " + destination);
             }
 
         } catch (JMSException e) {
