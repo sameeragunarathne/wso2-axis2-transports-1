@@ -15,16 +15,15 @@
 */
 package org.apache.axis2.transport.jms;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.naming.Context;
-
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.description.Parameter;
 import org.apache.axis2.description.ParameterInclude;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import javax.naming.Context;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Class managing a set of {@link JMSConnectionFactory} objects.
@@ -64,6 +63,23 @@ public class JMSConnectionFactoryManager {
     }
 
     /**
+     * Create JMSConnectionFactory instance from the definitions in the target address,
+     * and add into connectionFactories map keyed by the target address
+     *
+     * @param targetEPR the JMS target address contains transport definitions
+     */
+    public void loadConnectionFactoryFromTargetEPR(String targetEPR) {
+        try {
+            if (connectionFactories.get(targetEPR) == null) {
+                JMSConnectionFactory jmsConnectionFactory = new JMSConnectionFactory(targetEPR);
+                connectionFactories.put(jmsConnectionFactory.getName(), jmsConnectionFactory);
+            }
+        } catch (AxisJMSException e) {
+            log.error("Error setting up connection factory : " + targetEPR, e);
+        }
+    }
+
+    /**
      * Get the JMS connection factory with the given name.
      *
      * @param name the name of the JMS connection factory
@@ -95,6 +111,9 @@ public class JMSConnectionFactoryManager {
                 &&
                 equals(props.get(Context.PROVIDER_URL),
                     cfProperties.get(Context.PROVIDER_URL))
+                &&
+                equals(props.get(JMSConstants.PARAM_CACHE_LEVEL),
+                    cfProperties.get(JMSConstants.PARAM_CACHE_LEVEL))
                 &&
                 equals(props.get(Context.SECURITY_PRINCIPAL),
                     cfProperties.get(Context.SECURITY_PRINCIPAL))

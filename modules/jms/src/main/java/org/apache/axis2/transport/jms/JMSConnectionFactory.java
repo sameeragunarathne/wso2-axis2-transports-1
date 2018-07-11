@@ -19,6 +19,7 @@ import org.apache.axiom.om.OMElement;
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.description.Parameter;
 import org.apache.axis2.description.ParameterIncludeImpl;
+import org.apache.axis2.transport.base.BaseUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -88,23 +89,44 @@ public class JMSConnectionFactory {
         }
 
         digestCacheLevel();
+        initJMSConnectionFactory();
+        setMaxSharedJMSConnectionsCount();
+    }
+
+    /**
+     * Create a JMS CF definition from target endpoint reference
+     *
+     * @param targetEPR the JMS target address contains transport definitions
+     */
+    public JMSConnectionFactory(String targetEPR) {
+        this.name = targetEPR;
+        parameters.put(JMSConstants.PARAM_DESTINATION, JMSUtils.getDestination(targetEPR));
+        parameters.putAll(BaseUtils.getEPRProperties(targetEPR));
+        digestCacheLevel();
+        initJMSConnectionFactory();
+        setMaxSharedJMSConnectionsCount();
+    }
+
+    /**
+     * Initialize JMS connection factory based on transport parameters
+     */
+    private void initJMSConnectionFactory() {
         try {
             context = new InitialContext(parameters);
             conFactory = JMSUtils.lookup(context, ConnectionFactory.class,
-                parameters.get(JMSConstants.PARAM_CONFAC_JNDI_NAME));
+                    parameters.get(JMSConstants.PARAM_CONFAC_JNDI_NAME));
             if (parameters.get(JMSConstants.PARAM_DESTINATION) != null) {
                 sharedDestination = JMSUtils.lookup(context, Destination.class,
-                    parameters.get(JMSConstants.PARAM_DESTINATION));
+                        parameters.get(JMSConstants.PARAM_DESTINATION));
             }
             log.info("JMS ConnectionFactory : " + name + " initialized");
 
         } catch (NamingException e) {
             throw new AxisJMSException("Cannot acquire JNDI context, JMS Connection factory : " +
-                parameters.get(JMSConstants.PARAM_CONFAC_JNDI_NAME) + " or default destination : " +
-                parameters.get(JMSConstants.PARAM_DESTINATION) +
-                " for JMS CF : " + name + " using : " + parameters, e);
+                    parameters.get(JMSConstants.PARAM_CONFAC_JNDI_NAME) + " or default destination : " +
+                    parameters.get(JMSConstants.PARAM_DESTINATION) +
+                    " for JMS CF : " + name + " using : " + parameters, e);
         }
-        setMaxSharedJMSConnectionsCount();
     }
 
     /**
