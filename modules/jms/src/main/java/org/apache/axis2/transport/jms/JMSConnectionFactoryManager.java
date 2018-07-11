@@ -66,17 +66,18 @@ public class JMSConnectionFactoryManager {
      * Create JMSConnectionFactory instance from the definitions in the target address,
      * and add into connectionFactories map keyed by the target address
      *
-     * @param targetEPR the JMS target address contains transport definitions
+     * @param targetEndpoint the JMS target address contains transport definitions
      */
-    public void loadConnectionFactoryFromTargetEPR(String targetEPR) {
+    public JMSConnectionFactory getConnectionFactoryFromTargetEndpoint(String targetEndpoint) {
         try {
-            if (connectionFactories.get(targetEPR) == null) {
-                JMSConnectionFactory jmsConnectionFactory = new JMSConnectionFactory(targetEPR);
+            if (!connectionFactories.containsKey(targetEndpoint)) {
+                JMSConnectionFactory jmsConnectionFactory = new JMSConnectionFactory(targetEndpoint);
                 connectionFactories.put(jmsConnectionFactory.getName(), jmsConnectionFactory);
             }
         } catch (AxisJMSException e) {
-            log.error("Error setting up connection factory : " + targetEPR, e);
+            log.error("Error setting up connection factory : " + targetEndpoint, e);
         }
+        return connectionFactories.get(targetEndpoint);
     }
 
     /**
@@ -95,7 +96,7 @@ public class JMSConnectionFactoryManager {
      * the same underlying connection factory. Used by the JMSSender to determine if already
      * available resources should be used for outgoing messages
      *
-     * @param props a Map of connection factory JNDI properties and name
+         * @param props a Map of connection factory JNDI properties and name
      * @return the JMS connection factory or null if no connection factory compatible
      *         with the given properties exists
      */
@@ -114,6 +115,9 @@ public class JMSConnectionFactoryManager {
                 &&
                 equals(props.get(JMSConstants.PARAM_CACHE_LEVEL),
                     cfProperties.get(JMSConstants.PARAM_CACHE_LEVEL))
+                &&
+                equals(props.get(JMSConstants.PARAM_SESSION_TRANSACTED),
+                    cfProperties.get(JMSConstants.PARAM_SESSION_TRANSACTED))
                 &&
                 equals(props.get(Context.SECURITY_PRINCIPAL),
                     cfProperties.get(Context.SECURITY_PRINCIPAL))

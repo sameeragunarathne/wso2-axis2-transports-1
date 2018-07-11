@@ -96,12 +96,12 @@ public class JMSConnectionFactory {
     /**
      * Create a JMS CF definition from target endpoint reference
      *
-     * @param targetEPR the JMS target address contains transport definitions
+     * @param targetEndpoint the JMS target address contains transport definitions
      */
-    public JMSConnectionFactory(String targetEPR) {
-        this.name = targetEPR;
-        parameters.put(JMSConstants.PARAM_DESTINATION, JMSUtils.getDestination(targetEPR));
-        parameters.putAll(BaseUtils.getEPRProperties(targetEPR));
+    public JMSConnectionFactory(String targetEndpoint) {
+        this.name = targetEndpoint;
+        parameters.put(JMSConstants.PARAM_DESTINATION, JMSUtils.getDestination(targetEndpoint));
+        parameters.putAll(BaseUtils.getEPRProperties(targetEndpoint));
         digestCacheLevel();
         initJMSConnectionFactory();
         setMaxSharedJMSConnectionsCount();

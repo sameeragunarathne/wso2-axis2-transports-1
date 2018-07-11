@@ -118,15 +118,11 @@ public class JMSSender extends AbstractTransportSender implements ManagementSupp
             jmsOut = new JMSOutTransportInfo(targetAddress);
             // do we have a definition for a connection factory to use for this address?
             jmsConnectionFactory = getJMSConnectionFactory(jmsOut);
-            
-            if (jmsConnectionFactory != null) {
-                messageSender = new JMSMessageSender(jmsConnectionFactory, targetAddress);
 
-            } else {
-                connFacManager.loadConnectionFactoryFromTargetEPR(targetAddress);
-                jmsConnectionFactory = connFacManager.getJMSConnectionFactory(targetAddress);
-                messageSender = new JMSMessageSender(jmsConnectionFactory, targetAddress);
+            if (jmsConnectionFactory == null) {
+                jmsConnectionFactory = connFacManager.getConnectionFactoryFromTargetEndpoint(targetAddress);
             }
+            messageSender = new JMSMessageSender(jmsConnectionFactory, targetAddress);
 
         } else if (outTransportInfo instanceof JMSOutTransportInfo) {
 
