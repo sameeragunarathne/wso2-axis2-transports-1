@@ -37,7 +37,6 @@ import org.apache.commons.io.output.WriterOutputStream;
 
 import javax.activation.DataHandler;
 import javax.jms.*;
-import javax.jms.IllegalStateException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
@@ -119,19 +118,13 @@ public class JMSSender extends AbstractTransportSender implements ManagementSupp
             jmsOut = new JMSOutTransportInfo(targetAddress);
             // do we have a definition for a connection factory to use for this address?
             jmsConnectionFactory = getJMSConnectionFactory(jmsOut);
-            
-            if (jmsConnectionFactory != null) {
-                messageSender = new JMSMessageSender(jmsConnectionFactory, targetAddress);
 
-            } else {
-                try {
-                    messageSender = jmsOut.createJMSSender();
-                } catch (JMSException e) {
-                    handleException("Unable to create a JMSMessageSender for : " + outTransportInfo, e);
-                }
+            if (jmsConnectionFactory == null) {
+                jmsConnectionFactory = connFacManager.getConnectionFactoryFromTargetEndpoint(targetAddress);
             }
+            messageSender = new JMSMessageSender(jmsConnectionFactory, targetAddress);
 
-        } else if (outTransportInfo != null && outTransportInfo instanceof JMSOutTransportInfo) {
+        } else if (outTransportInfo instanceof JMSOutTransportInfo) {
 
             jmsOut = (JMSOutTransportInfo) outTransportInfo;
             try {

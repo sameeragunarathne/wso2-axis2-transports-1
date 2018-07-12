@@ -15,16 +15,15 @@
 */
 package org.apache.axis2.transport.jms;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.naming.Context;
-
 import org.apache.axis2.AxisFault;
 import org.apache.axis2.description.Parameter;
 import org.apache.axis2.description.ParameterInclude;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import javax.naming.Context;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Class managing a set of {@link JMSConnectionFactory} objects.
@@ -64,6 +63,24 @@ public class JMSConnectionFactoryManager {
     }
 
     /**
+     * Create JMSConnectionFactory instance from the definitions in the target address,
+     * and add into connectionFactories map keyed by the target address
+     *
+     * @param targetEndpoint the JMS target address contains transport definitions
+     */
+    public JMSConnectionFactory getConnectionFactoryFromTargetEndpoint(String targetEndpoint) {
+        try {
+            if (!connectionFactories.containsKey(targetEndpoint)) {
+                JMSConnectionFactory jmsConnectionFactory = new JMSConnectionFactory(targetEndpoint);
+                connectionFactories.put(jmsConnectionFactory.getName(), jmsConnectionFactory);
+            }
+        } catch (AxisJMSException e) {
+            log.error("Error setting up connection factory : " + targetEndpoint, e);
+        }
+        return connectionFactories.get(targetEndpoint);
+    }
+
+    /**
      * Get the JMS connection factory with the given name.
      *
      * @param name the name of the JMS connection factory
@@ -79,7 +96,7 @@ public class JMSConnectionFactoryManager {
      * the same underlying connection factory. Used by the JMSSender to determine if already
      * available resources should be used for outgoing messages
      *
-     * @param props a Map of connection factory JNDI properties and name
+         * @param props a Map of connection factory JNDI properties and name
      * @return the JMS connection factory or null if no connection factory compatible
      *         with the given properties exists
      */
@@ -95,6 +112,12 @@ public class JMSConnectionFactoryManager {
                 &&
                 equals(props.get(Context.PROVIDER_URL),
                     cfProperties.get(Context.PROVIDER_URL))
+                &&
+                equals(props.get(JMSConstants.PARAM_CACHE_LEVEL),
+                    cfProperties.get(JMSConstants.PARAM_CACHE_LEVEL))
+                &&
+                equals(props.get(JMSConstants.PARAM_SESSION_TRANSACTED),
+                    cfProperties.get(JMSConstants.PARAM_SESSION_TRANSACTED))
                 &&
                 equals(props.get(Context.SECURITY_PRINCIPAL),
                     cfProperties.get(Context.SECURITY_PRINCIPAL))
