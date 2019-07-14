@@ -215,6 +215,8 @@ public class JMSConstants {
     public static final String PARAM_JMS_USERNAME = "transport.jms.UserName";
     /** The password to use when obtaining a JMS Connection */
     public static final String PARAM_JMS_PASSWORD = "transport.jms.Password";
+    public static final String PARAM_KEYSTORE_PASSWORD = "key_store_password";
+    public static final String PARAM_TRUSTSTORE_PASSWORD = "trust_store_password";
 
      public static final String PARAM_DURABLE_SUB_CLIENT_ID =
             "transport.jms.DurableSubscriberClientID";
@@ -368,4 +370,9 @@ public class JMSConstants {
     public static final String HYPHEN_REPLACEMENT_STR = "_DASHED_";
 
     public static final String DEFAULT_HYPHEN_SUPPORT = HYPHEN_MODE_NONE;
+
+    /**
+     * Parameter for jndi security credentials in jms configs of axis2.xml
+     */
+    public static final String PARAM_NAMING_SECURITY_CREDENTIALS = "java.naming.security.credentials";
 }
